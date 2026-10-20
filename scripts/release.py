@@ -65,7 +65,7 @@ def prepare():
     except UnsupportedSource as ex:
         state.update(status="blocked", reason=str(ex))
     else:
-        state.update(status="ready", tag="fork-" + build_id)
+        state.update(status="ready", tag="pcl2-" + build_id)
         # Embed user-provided API credentials without putting them in shell code or logs.
         secret = source / "Plain Craft Launcher 2/Modules/ModSecret.vb"
         text = secret.read_text(encoding="utf-8-sig")
@@ -95,23 +95,23 @@ def publish():
         exe = source / "Plain Craft Launcher 2.exe"
         if not exe.is_file():
             raise RuntimeError("Build executable missing; channel will not be changed")
-        archive = ROOT / "PCL-fork.zip"
+        archive = ROOT / "PCL2.zip"
         with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as z:
             for path in source.iterdir():
                 if path.is_file() and path.suffix.lower() not in (".pdb", ".xml"):
                     z.write(path, path.name)
         state["sha256"] = hashlib.sha256(archive.read_bytes()).hexdigest()
-        standalone = ROOT / "PCL-fork.exe"
+        standalone = ROOT / "PCL2.exe"
         shutil.copy2(exe, standalone)
         exe_sha256 = hashlib.sha256(standalone.read_bytes()).hexdigest()
         tag = state["tag"]
         # A rerun may resume an existing draft after an interrupted upload.
         existing = subprocess.run(["gh", "release", "view", tag, "--repo", repo], capture_output=True)
         if existing.returncode:
-            gh("release", "create", tag, "--repo", repo, "--target", os.environ["GITHUB_SHA"], "--draft", "--title", f"PCL fork {state['upstream_sha'][:12]}", "--notes",
-               f"Upstream: https://github.com/{UPSTREAM}/commit/{state['upstream_sha']}\nRestrictMcDownload = False. Updates use {repo}.\nDownload PCL-fork.zip and extract all files.\nBuild: {state['build_id']}")
+            gh("release", "create", tag, "--repo", repo, "--target", os.environ["GITHUB_SHA"], "--draft", "--title", f"PCL2 {state['upstream_sha'][:12]}", "--notes",
+               f"Upstream: https://github.com/{UPSTREAM}/commit/{state['upstream_sha']}\nRestrictMcDownload = False. Updates use {repo}.\nDownload PCL2.zip and extract all files.\nBuild: {state['build_id']}")
         checksums = ROOT / "SHA256SUMS.txt"
-        checksums.write_text(f"{state['sha256']}  PCL-fork.zip\n{exe_sha256}  PCL-fork.exe\n", encoding="utf-8")
+        checksums.write_text(f"{state['sha256']}  PCL2.zip\n{exe_sha256}  PCL2.exe\n", encoding="utf-8")
         gh("release", "upload", tag, str(archive), str(standalone), str(ROOT / "patched-source.zip"), str(checksums), "--repo", repo, "--clobber")
         gh("release", "edit", tag, "--repo", repo, "--draft=false", "--latest")
     channel = ROOT / "channel.json"

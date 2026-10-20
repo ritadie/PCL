@@ -9,7 +9,7 @@
 且已知入口和更新挂钩结构匹配时，才将开关设为 `False`，安装本分支的更新检查，编译 Release。
 源码检查不等同于证明以后上游不会引入其他限制；遇到结构变化需要人工审查。
 
-发布内容：编译好的 `PCL-fork.exe`、完整运行目录 `PCL-fork.zip`、不含注入密钥的 `patched-source.zip` 和 `SHA256SUMS.txt`。
+发布内容：编译好的 `PCL2.exe`、完整运行目录 `PCL2.zip`、不含注入密钥的 `patched-source.zip` 和 `SHA256SUMS.txt`。
 成功发布后才更新 `update-channel` 预发布中的 `channel.json`。
 上游 SHA 和自动化脚本指纹相同则跳过；手动运行勾选 force 可重试同一版本。
 网络、还原、编译失败会令 Actions 失败，保留上一份更新通道。
