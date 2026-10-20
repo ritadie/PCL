@@ -342,3 +342,15 @@ ASALocalRun/
 healthchecksdb
 
 MaskFiles/
+
+# Local compilation tools and upstream staging
+.build/
+_upstream/
+.build-state.json
+dotnet-releases.json
+dotnet-sdk.zip
+net48.nupkg
+patched-source.zip
+PCL-fork.zip
+channel.json
+SHA256SUMS.txt

@@ -1,0 +1,60 @@
+name: Upstream build and release
+
+on:
+  schedule:
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: Rebuild even if upstream and pipeline are unchanged
+        type: boolean
+        default: false
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/**'
+      - '.github/workflows/upstream-release.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: upstream-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: windows-2022
+    timeout-minutes: 40
+    env:
+      FORCE_BUILD: ${{ inputs.force || 'false' }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Test source compatibility guard
+        run: python -m unittest discover -s scripts -p "test_*.py"
+      - name: Detect upstream and prepare supported source
+        id: prepare
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PCL_MS_CLIENT_ID: ${{ secrets.CLIENT_ID }}
+          PCL_CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
+        run: python scripts/release.py prepare
+      - uses: actions/setup-dotnet@v5
+        if: steps.prepare.outputs.status == 'ready'
+        with:
+          dotnet-version: '9.0.x'
+      - uses: microsoft/setup-msbuild@v3
+        if: steps.prepare.outputs.status == 'ready'
+      - name: Compile Release
+        if: steps.prepare.outputs.status == 'ready'
+        run: msbuild "_upstream/Plain Craft Launcher 2.sln" /restore /m /p:Configuration=Release /verbosity:minimal
+      - name: Publish build or compatibility notice
+        if: steps.prepare.outputs.status == 'ready' || steps.prepare.outputs.status == 'blocked'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/release.py publish
