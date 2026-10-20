@@ -2,6 +2,7 @@
     Public Const ForkRepository As String = "@@REPOSITORY@@"
     Public Const ForkBuildId As String = "@@BUILD_ID@@"
     Private ForkUpdateBusy As Integer = 0
+    Private ForkAutoChecked As Integer = 0
     Private ForkBlockedShown As Boolean = False
 
     Friend Sub UpdateCheckByButton()
@@ -9,11 +10,13 @@
     End Sub
 
     Private Sub ForkCheckUpdate(Manual As Boolean)
+        '自动检查每次启动只尝试一次；断网也不重试，不参与游戏启动或下载流程。
+        If Not Manual AndAlso System.Threading.Interlocked.Exchange(ForkAutoChecked, 1) <> 0 Then Return
         If System.Threading.Interlocked.Exchange(ForkUpdateBusy, 1) <> 0 Then Return
         Try
             Dim Json As String
             Using Client As New System.Net.Http.HttpClient()
-                Client.Timeout = TimeSpan.FromSeconds(20)
+                Client.Timeout = TimeSpan.FromSeconds(5)
                 Client.DefaultRequestHeaders.UserAgent.ParseAdd("PCL-Fork-Updater/1.0")
                 Dim Url = "https://github.com/" & ForkRepository & "/releases/download/update-channel/channel.json?t=" & DateTime.UtcNow.Ticks.ToString()
                 Json = Client.GetStringAsync(Url).GetAwaiter().GetResult()
@@ -22,11 +25,10 @@
             If CInt(Info("schema")) <> 1 Then Throw New Exception("不支持的更新通道格式")
             Dim Status = CStr(Info("status"))
             If Status = "blocked" Then
+                If Not ForkShouldShowCompatibilityNotice() Then Return
                 RunInUi(Sub()
-                            If ForkBlockedShown AndAlso Not Manual Then Return
-                            ForkBlockedShown = True
-                            If MyMsgBox("上游源码已无法通过 RestrictMcDownload = False 的方式继续自动构建。本分支已暂停发布，请前往上游仓库查看说明并解决。" & vbCrLf &
-                                        "当前已安装版本可以继续使用。", "上游兼容性变化", "前往上游仓库", "稍后") = 1 Then
+                            If MyMsgBox("检测到上游兼容性变化，当前方式暂时无法继续自动构建。你可以前往上游仓库查看解决办法，也可以关闭此提示继续使用。" & vbCrLf &
+                                        "此提醒仅显示一次，不限制启动器的其他功能。", "兼容性提醒（可忽略）", "前往上游仓库", "继续使用") = 1 Then
                                 OpenWebsite("https://github.com/Meloong-Git/PCL")
                             End If
                         End Sub)
@@ -54,4 +56,20 @@
             System.Threading.Interlocked.Exchange(ForkUpdateBusy, 0)
         End Try
     End Sub
+
+    Private Function ForkShouldShowCompatibilityNotice() As Boolean
+        If ForkBlockedShown Then Return False
+        ForkBlockedShown = True
+        Try
+            Dim Folder = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PCL2", ForkRepository.Replace("/", "_"))
+            Dim Marker = System.IO.Path.Combine(Folder, "compatibility-notice-shown")
+            If System.IO.File.Exists(Marker) Then Return False
+            System.IO.Directory.CreateDirectory(Folder)
+            System.IO.File.WriteAllText(Marker, "shown")
+        Catch ex As Exception
+            '无法保存提醒记录时也继续使用，当前进程内仍只提醒一次。
+            Logger.Warn(ex, "保存兼容性提醒记录失败")
+        End Try
+        Return True
+    End Function
 
