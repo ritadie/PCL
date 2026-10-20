@@ -352,5 +352,6 @@ dotnet-sdk.zip
 net48.nupkg
 patched-source.zip
 PCL-fork.zip
+PCL-fork.exe
 channel.json
 SHA256SUMS.txt

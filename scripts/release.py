@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 import pathlib
+import shutil
 import subprocess
 import zipfile
 
@@ -100,6 +101,9 @@ def publish():
                 if path.is_file() and path.suffix.lower() not in (".pdb", ".xml"):
                     z.write(path, path.name)
         state["sha256"] = hashlib.sha256(archive.read_bytes()).hexdigest()
+        standalone = ROOT / "PCL-fork.exe"
+        shutil.copy2(exe, standalone)
+        exe_sha256 = hashlib.sha256(standalone.read_bytes()).hexdigest()
         tag = state["tag"]
         # A rerun may resume an existing draft after an interrupted upload.
         existing = subprocess.run(["gh", "release", "view", tag, "--repo", repo], capture_output=True)
@@ -107,8 +111,8 @@ def publish():
             gh("release", "create", tag, "--repo", repo, "--target", os.environ["GITHUB_SHA"], "--draft", "--title", f"PCL fork {state['upstream_sha'][:12]}", "--notes",
                f"Upstream: https://github.com/{UPSTREAM}/commit/{state['upstream_sha']}\nRestrictMcDownload = False. Updates use {repo}.\nDownload PCL-fork.zip and extract all files.\nBuild: {state['build_id']}")
         checksums = ROOT / "SHA256SUMS.txt"
-        checksums.write_text(f"{state['sha256']}  PCL-fork.zip\n", encoding="utf-8")
-        gh("release", "upload", tag, str(archive), str(ROOT / "patched-source.zip"), str(checksums), "--repo", repo, "--clobber")
+        checksums.write_text(f"{state['sha256']}  PCL-fork.zip\n{exe_sha256}  PCL-fork.exe\n", encoding="utf-8")
+        gh("release", "upload", tag, str(archive), str(standalone), str(ROOT / "patched-source.zip"), str(checksums), "--repo", repo, "--clobber")
         gh("release", "edit", tag, "--repo", repo, "--draft=false", "--latest")
     channel = ROOT / "channel.json"
     channel.write_text(json.dumps(state, indent=2), encoding="utf-8")
