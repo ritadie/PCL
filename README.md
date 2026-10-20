@@ -5,7 +5,8 @@
 [![哔哩哔哩](https://img.shields.io/badge/动态-BiliBili-00A4DB?style=flat&labelColor=444444&logoSize=auto)](https://space.bilibili.com/11343203/dynamic)
 [![爱发电](https://img.shields.io/badge/赞助-爱发电-946ce6?style=flat&labelColor=444444&logoSize=auto)](https://meloong.com/afd/a/LTCat)
 
-包含 PCL 的大部分源代码，包括 UI 库、动画模块、下载模块、Minecraft 启动模块等！<br/>
+本仓库为应对无法下载我的世界情况而fork，如果感兴趣请去原仓库点个星<br/>
+另外感谢PCL作者！！！<br/>
 代码并不是实时更新的，它会在每次 PCL 发布更新时同步一次。<br/>
 非常感谢社区的大力支持！
 
